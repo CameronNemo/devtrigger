@@ -1,10 +1,10 @@
-#devtriggerall
+# devtriggerall
 
 This tool is intended to be used in conjunction with a hotplug daemon/helper. During boot, devices may be plugged in before the hotplug daemon/helper is launched.
 
 By triggering "add" events for all currently present devices, this tool allows the hotplug daemon/helper to process the events it may have missed.
 
-##Compilation, Installation, and Usage
+## Compilation, Installation, and Usage
 
 Compilation is a simple:
 
