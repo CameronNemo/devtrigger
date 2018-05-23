@@ -24,8 +24,7 @@ int write_uevent(char path[FILENAME_MAX]);
 int main(void) {
 	openlog("devtriggerall", LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
 
-	if (trigger_glob("/sys/class/*/*/uevent") == 0 &&
-	    trigger_glob("/sys/bus/usb/devices/[0-9]*-[0-9]*/uevent") == 0) {
+	if (trigger_glob("/sys/class/*/*/uevent") == 0) {
 		return EXIT_SUCCESS;
 	} else {
 		return EXIT_FAILURE;
