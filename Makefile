@@ -1,12 +1,12 @@
 CC=gcc
 CFLAGS=-Wall -Werror
 
-all: devtriggerall
+all: devtrigger
 
-devtriggerall: devtriggerall.c
+devtrigger: devtrigger.c
 
 install: all
-	install devtriggerall $(INSTALL_PREFIX)/sbin/devtriggerall
+	install devtrigger $(INSTALL_PREFIX)/sbin/devtrigger
 
 clean:
-	rm -f devtriggerall
+	rm -f devtrigger

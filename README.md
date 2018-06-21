@@ -1,4 +1,4 @@
-# devtriggerall
+# devtrigger
 
 This tool is intended to be used in conjunction with a hotplug daemon/helper. During boot, devices may be plugged in before the hotplug daemon/helper is launched.
 
