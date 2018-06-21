@@ -142,30 +142,30 @@ int write_uevent(char path[FILENAME_MAX]) {
 	int r;
 
 	/* try to open uevent file, if there is one */
-        errno = 0;
+	errno = 0;
 	uevent = open(path, O_WRONLY);
 
 	if (uevent >= 0) {
-                /* opened the file, so write the event */
+		/* opened the file, so write the event */
 		len = strlen(action);
-                if (write(uevent, action, len) == len) {
-                        syslog(LOG_DEBUG, "wrote to device: %s", path);
-                        r = 1;
-                } else {
-                        syslog(LOG_ERR, "could not write to device: %s", path);
-                        r = -1;
-                }
+		if (write(uevent, action, len) == len) {
+			syslog(LOG_DEBUG, "wrote to device: %s", path);
+			r = 1;
+		} else {
+			syslog(LOG_ERR, "could not write to device: %s", path);
+			r = -1;
+		}
 		close(uevent);
-        } else {
-                /* couldn't open uevent file, but why? */
-                if (errno == ENOENT) {
-                        /* there was no uevent file, this is not an error */
+	} else {
+		/* couldn't open uevent file, but why? */
+		if (errno == ENOENT) {
+			/* there was no uevent file, this is not an error */
 			r = 0;
-                } else {
-                        syslog(LOG_ERR, "could not open device: %s", path);
-                        r = -1;
-                }
-        }
+		} else {
+			syslog(LOG_ERR, "could not open device: %s", path);
+			r = -1;
+		}
+	}
 
 	if (errno != 0)
 		errno = 0;
