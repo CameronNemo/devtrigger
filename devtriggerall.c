@@ -1,4 +1,5 @@
 #include <glob.h>
+#include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -12,7 +13,15 @@
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
-int trigger_glob(const char* g);
+#define VERSION "0.0.1"
+#define OPT_STR "vhda:s:"
+
+static const char *action;
+static int debug;
+
+void print_usage(char *name);
+void print_version(char *name);
+int trigger_glob(char g[FILENAME_MAX]);
 int write_uevent(char path[FILENAME_MAX]);
 
 /*
@@ -21,14 +30,71 @@ int write_uevent(char path[FILENAME_MAX]);
  * at boot after the hotplug daemon/helper is ready to run.
  */
 
-int main(void) {
+int main(int argc, char **argv) {
+	int   opt;
+	int   r;
+	char  g[FILENAME_MAX] = "/sys/class/*/*/uevent";
+	char *name = basename(argv[0]);
+
+	while ((opt = getopt(argc, argv, OPT_STR)) != -1) {
+		switch (opt) {
+			case 'v':
+				print_version(name);
+				return EXIT_SUCCESS;
+			case 'd':
+				debug = 1;
+				break;
+			case 'a':
+				action = optarg;
+				break;
+			case 's':
+				/* 'all' is a special case */
+				if (strncmp(optarg, "all", 4) == 0)
+					break;
+				r = snprintf(g, FILENAME_MAX,
+				             "/sys/class/%s/*/uevent", optarg);
+				if (r < 0 || r >= FILENAME_MAX)
+					return EXIT_FAILURE;
+				break;
+			case 'h':
+				print_usage(name);
+				return EXIT_SUCCESS;
+			case '?':
+				print_usage(name);
+			default:
+				return EXIT_FAILURE;
+		}
+	}
+
+	if (optind < argc) {
+		print_usage(name);
+		return EXIT_FAILURE;
+	}
+
+	if (!action)
+		action = "add";
+
 	openlog("devtriggerall", LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
 
-	if (trigger_glob("/sys/class/*/*/uevent") == 0) {
+	if (trigger_glob(g) == 0) {
 		return EXIT_SUCCESS;
 	} else {
 		return EXIT_FAILURE;
 	}
+}
+
+void print_usage(char *name) {
+	fprintf(stderr, "Usage: %s [OPTIONS]\n\n", name);
+	fprintf(stderr, "\t-h\t\tshow this help message\n");
+	fprintf(stderr, "\t-v\t\tprint version string\n");
+	fprintf(stderr, "\t-d\t\tenable debugging messages\n");
+	fprintf(stderr, "\t-s SUBSYSTEM\ttrigger events for the specified subsystem (default: all)\n");
+	fprintf(stderr, "\t-a ACTION\ttrigger the specified event (default: add)\n");
+	fprintf(stderr, "\n");
+}
+
+void print_version(char *name) {
+	fprintf(stderr, "%s (%s)\n", name, VERSION);
 }
 
 /**
@@ -39,7 +105,7 @@ int main(void) {
  *
  * Returns: 0 on success, -1 on error
  **/
-int trigger_glob(const char* g) {
+int trigger_glob(char g[FILENAME_MAX]) {
 	int r;
 	glob_t uevents;
 
@@ -66,12 +132,13 @@ int trigger_glob(const char* g) {
  * write_uevent:
  * @path: path of a uevent file to write to
  *
- * Writes to a uevent file in sysfs, triggering an add event.
+ * Writes to a uevent file in sysfs, triggering an add or remove event.
  *
  * Returns: 1 on successful write, 0 if file not found, -1 on error
  **/
 int write_uevent(char path[FILENAME_MAX]) {
 	int uevent;
+	int len;
 	int r;
 
 	/* try to open uevent file, if there is one */
@@ -79,8 +146,9 @@ int write_uevent(char path[FILENAME_MAX]) {
 	uevent = open(path, O_WRONLY);
 
 	if (uevent >= 0) {
-                /* opened the file, so write the add event */
-                if (write(uevent, "add", 3) == 3) {
+                /* opened the file, so write the event */
+		len = strlen(action);
+                if (write(uevent, action, len) == len) {
                         syslog(LOG_DEBUG, "wrote to device: %s", path);
                         r = 1;
                 } else {
@@ -103,73 +171,4 @@ int write_uevent(char path[FILENAME_MAX]) {
 		errno = 0;
 
 	return r;
-}
-
-/* not currently used or working. recursively triggers add events.
- * intended to be used in /sys/devices/ directory. */
-int trigger_dir(char dir[FILENAME_MAX]) {
-	int r;
-	int total_events = 0;
-	DIR *d;
-	struct dirent *f;
-
-	/* transform directory path to uevent file path, then try to write to it */
-	char uevent_path[FILENAME_MAX];
-	strcpy(uevent_path, dir);
-        strcat(uevent_path, "/uevent");
-	r = write_uevent(uevent_path);
-
-	if (r == 0)
-		syslog(LOG_DEBUG, "looking for subdirectories in %s", dir);
-	else
-		return r;
-
-	/* try opening the directory */
-	if ((d = opendir(dir)) == NULL) {
-		syslog(LOG_ERR, "could not open directory: %s", dir);
-		return -1;
-	}
-
-	while ((f = readdir(d)) != NULL) {
-		/* skip "." and ".." */
-		if(strcmp(f->d_name, ".") == 0 || strcmp(f->d_name, "..") == 0)
-			continue;
-
-		int events;
-		char fpath[FILENAME_MAX];
-		strcpy(fpath, dir);
-		strcat(fpath, "/");
-		strcat(fpath, f->d_name);
-
-		/* filter for directories and links to dirs */
-		if (f->d_type == DT_LNK) {
-			/* check if the link points to a directory  */
-			struct stat buf;
-			if (stat(fpath, &buf) == -1) {
-				syslog(LOG_ERR, "stat failed for file: %s", fpath);
-				r = -1;
-				errno = 0;
-				continue;
-			} else if (!S_ISDIR(buf.st_mode)) {
-				/* not a directory, so skip it */
-				continue;
-			}
-		} else if (f->d_type != DT_DIR) {
-			continue;
-		}
-
-		/* recursively call trigger_dir */
-		events = trigger_dir(fpath);
-		if (events < 0)
-			r = -1;
-		else
-			total_events += events;
-	}
-
-	if (r != 0) {
-		syslog(LOG_ERR, "error while triggering add events in %s", dir);
-		return r;
-	} else {
-		return total_events;
-	}
 }
