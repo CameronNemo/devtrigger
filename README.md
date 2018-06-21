@@ -14,8 +14,16 @@ To install:
 
     sudo make install
 
-By default, `devtriggerall` will be installed to `/sbin`. Set the environment variable `INSTALL_PREFIX` to change this:
+By default, `devtrigger` will be installed to `/sbin`. Set the environment variable `INSTALL_PREFIX` to change this:
 
     sudo env INSTALL_PREFIX=/usr/local make install
 
 Then call the program directly after launching your preffered hotplug daemon.
+
+    device_manager_daemon &
+    devtrigger
+
+You can also target specific subsystems and trigger other events for testing purposes:
+
+    devtrigger -s net
+    devtrigger -s drm -a remove
