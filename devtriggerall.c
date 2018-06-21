@@ -1,14 +1,11 @@
 #include <glob.h>
 #include <libgen.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <syslog.h>
-#include <dirent.h>
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -74,8 +71,6 @@ int main(int argc, char **argv) {
 	if (!action)
 		action = "add";
 
-	openlog("devtriggerall", LOG_CONS | LOG_PID | LOG_PERROR, LOG_DAEMON);
-
 	if (trigger_glob(g) == 0) {
 		return EXIT_SUCCESS;
 	} else {
@@ -112,10 +107,10 @@ int trigger_glob(char g[FILENAME_MAX]) {
 	r = glob(g, 0, NULL, &uevents);
 
 	if (r == GLOB_NOMATCH) {
-		syslog(LOG_DEBUG, "glob did not find any matches for pattern %s", g);
+		perror("glob");
 		return 0;
 	} else if (r != 0) {
-		syslog(LOG_ERR, "glob returned error for pattern %s", g);
+		perror("glob");
 		return -1;
 	}
 
@@ -149,10 +144,10 @@ int write_uevent(char path[FILENAME_MAX]) {
 		/* opened the file, so write the event */
 		len = strlen(action);
 		if (write(uevent, action, len) == len) {
-			syslog(LOG_DEBUG, "wrote to device: %s", path);
+			/* wrote to device */
 			r = 1;
 		} else {
-			syslog(LOG_ERR, "could not write to device: %s", path);
+			perror("write");
 			r = -1;
 		}
 		close(uevent);
@@ -162,7 +157,7 @@ int write_uevent(char path[FILENAME_MAX]) {
 			/* there was no uevent file, this is not an error */
 			r = 0;
 		} else {
-			syslog(LOG_ERR, "could not open device: %s", path);
+			perror("open");
 			r = -1;
 		}
 	}
