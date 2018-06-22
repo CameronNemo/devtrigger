@@ -6,7 +6,7 @@ By triggering "add" events for all currently present devices, this tool allows t
 
 ## Compilation, Installation, and Usage
 
-Compilation is a simple:
+Compilation requires `help2man` and is a simple:
 
     make
 
@@ -14,9 +14,9 @@ To install:
 
     sudo make install
 
-By default, `devtrigger` will be installed to `/sbin`. Set the environment variable `INSTALL_PREFIX` to change this:
+By default, `devtrigger` will be installed to `/usr/local`. Set the variable `PREFIX` to change this:
 
-    sudo env INSTALL_PREFIX=/usr/local make install
+    sudo env PREFIX=/usr/local make install
 
 Then call the program directly after launching your preffered hotplug daemon.
 
