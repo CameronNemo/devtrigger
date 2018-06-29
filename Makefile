@@ -8,13 +8,18 @@ MANDIR=$(DESTDIR)$(PREFIX)/share/man/man1
 MANFLAGS=--no-discard-stderr --no-info -h -h -v -v
 CFLAGS=-Wall -Werror
 
+HELP2MAN := $(shell which help2man 2>/dev/null)
+
 all: devtrigger man
 
 devtrigger: devtrigger.c
 
 man: devtrigger
-	test -n $(which help2man) || { echo "help2man not installed"; exit 1; }
-	help2man $(MANFLAGS) ./devtrigger | gzip - >devtrigger.1.gz
+ifdef HELP2MAN
+	$(HELP2MAN) $(MANFLAGS) ./devtrigger | gzip - >devtrigger.1.gz
+else
+	$(error "help2man is not installed")
+endif
 
 install: all
 	install -dZ $(BINDIR)
