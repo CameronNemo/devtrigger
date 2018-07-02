@@ -25,26 +25,29 @@ int write_uevent(const char* path);
 
 int main(int argc, char **argv) {
 	int   opt;
-	char *subsystem = NULL;
+	char *subsystem, *name;
 
-	char *name = basename(argv[0]);
+	name = basename(argv[0]);
+	action = UTI_ACTION_DEFAULT;
+	subsystem = "*";
 
 	while ((opt = getopt(argc, argv, UTI_OPT_STR)) != -1) {
 		switch (opt) {
 			case 'v':
 				print_version(name);
 				return EXIT_SUCCESS;
+			case 'h':
+				print_usage(name);
+				return EXIT_SUCCESS;
 			case 'd':
 				log_priority = 1;
+				break;
 			case 'r':
 				action = UTI_ACTION_REMOVE;
 				break;
 			case 's':
 				subsystem = optarg;
 				break;
-			case 'h':
-				print_usage(name);
-				return EXIT_SUCCESS;
 			case '?':
 				print_usage(name);
 			default:
@@ -56,12 +59,6 @@ int main(int argc, char **argv) {
 		print_usage(name);
 		return EXIT_FAILURE;
 	}
-
-	if (!action)
-		action = UTI_ACTION_DEFAULT;
-
-	if (!subsystem)
-		subsystem = "*";
 
 	return trigger_subsystem(subsystem) == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
@@ -82,7 +79,6 @@ void print_version(const char *name) {
 
 /**
  * trigger_subsystem:
- *
  * @subsystem:	glob pattern to match to subsystem names
  *
  * Triggers events for devices in /sys/class/ and /sys/bus/.
@@ -117,7 +113,6 @@ int trigger_subsystem(const char* subsystem) {
 
 /**
  * trigger_glob:
- *
  * @g: glob pattern that matches to desired uevent files
  *
  * Triggers add events for all uevent files matching the pattern.
@@ -150,7 +145,6 @@ int trigger_glob(const char* pattern) {
 
 /**
  * write_uevent:
- *
  * @path: path of a uevent file to write to
  *
  * Writes to a uevent file in sysfs, triggering an add or remove event.
